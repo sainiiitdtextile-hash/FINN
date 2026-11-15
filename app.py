@@ -45,6 +45,10 @@ if "research_pages" not in st.session_state:
     st.session_state.research_pages = []
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
+if "research_answer_cache" not in st.session_state:
+    st.session_state.research_answer_cache = {}
+if "brief_cache" not in st.session_state:
+    st.session_state.brief_cache = {}
 
 with st.sidebar:
     st.markdown("# ◈ FINN")
@@ -205,26 +209,33 @@ elif section == "Intelligence":
                 source_url = str(row.get("source_url", "")).strip()
                 if source_url and source_url.lower() != "nan":
                     st.link_button("Open original filing", source_url)
+                brief_key = "|".join([
+                    str(row.get("symbol", "")), str(row.get("headline", "")),
+                    str(row.get("details", "")), str(row.get("category", ""))
+                ])
                 if st.button("Generate AI investor brief", key=f"brief_{row.name}"):
-                    try:
-                        brief = ask_groq(
-                            "You are FINN, a precise investment-intelligence analyst. Use ONLY the supplied filing headline and details. "
-                            "Separate (A) facts explicitly stated in the filing, (B) plausible investor implications, and "
-                            "(C) items to verify. Never invent dates, amounts, decisions, guidance, or company-specific context. "
-                            "Do not imply that a routine board meeting signals good governance or a positive investment outcome. "
-                            "Do not speculate that dividends, buybacks, acquisitions, or strategy changes may occur unless the filing says so. "
-                            "Keep implications conditional and explicitly label them as general possibilities, not filing facts. "
-                            "If the filing contains little detail, keep the brief short and say that the filing provides limited information. "
-                            "Do not give buy/sell advice.",
-                            f"Company: {row['symbol']}\nHeadline: {row['headline']}\n"
-                            f"Filing details: {row['details']}\nCategory: {row['category']}\n\n"
-                            "Return: 1) What happened 2) Why an investor may care 3) What to verify next. "
-                            "If information is insufficient, say so.",
-                            max_tokens=700,
-                        )
-                        st.markdown(brief)
-                    except Exception as exc:
-                        st.error(str(exc))
+                    if brief_key not in st.session_state.brief_cache:
+                        try:
+                            st.session_state.brief_cache[brief_key] = ask_groq(
+                                "You are FINN, a precise investment-intelligence analyst. Use ONLY the supplied filing headline and details. "
+                                "Separate (A) facts explicitly stated in the filing, (B) plausible investor implications, and "
+                                "(C) items to verify. Never invent dates, amounts, decisions, guidance, or company-specific context. "
+                                "Do not imply that a routine board meeting signals good governance or a positive investment outcome. "
+                                "Do not speculate that dividends, buybacks, acquisitions, or strategy changes may occur unless the filing says so. "
+                                "Keep implications conditional and explicitly label them as general possibilities, not filing facts. "
+                                "If the filing contains little detail, keep the brief short and say that the filing provides limited information. "
+                                "Do not give buy/sell advice.",
+                                f"Company: {row['symbol']}\\nHeadline: {row['headline']}\\n"
+                                f"Filing details: {row['details']}\\nCategory: {row['category']}\\n\\n"
+                                "Return: 1) What happened 2) Why an investor may care 3) What to verify next. "
+                                "If information is insufficient, say so.",
+                                max_tokens=500,
+                            )
+                        except Exception as exc:
+                            st.error(str(exc))
+                if brief_key in st.session_state.brief_cache:
+                    st.markdown(st.session_state.brief_cache[brief_key])
+
     else:
         st.info("No announcements loaded yet. Upload an exchange export or your own CSV to activate this feed.")
 
@@ -289,7 +300,15 @@ else:
             st.session_state.chat_history.append({"role": "user", "content": question})
             with st.spinner("Retrieving relevant pages and analysing with Groq…"):
                 try:
-                    answer, used_sources = answer_from_documents(pages, question)
+                    doc_key = "|".join(
+                        f"{p['source']}:{p['page']}:{len(p['text'])}" for p in pages
+                    )
+                    cache_key = doc_key + "|" + question.strip().casefold()
+                    if cache_key in st.session_state.research_answer_cache:
+                        answer, used_sources = st.session_state.research_answer_cache[cache_key]
+                    else:
+                        answer, used_sources = answer_from_documents(pages, question)
+                        st.session_state.research_answer_cache[cache_key] = (answer, used_sources)
                     st.session_state.chat_history.append(
                         {"role": "assistant", "content": answer, "sources": used_sources}
                     )
