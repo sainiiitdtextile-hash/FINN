@@ -208,8 +208,14 @@ elif section == "Intelligence":
                 if st.button("Generate AI investor brief", key=f"brief_{row.name}"):
                     try:
                         brief = ask_groq(
-                            "You are FINN, an investment intelligence analyst. Do not invent facts. "
-                            "Distinguish filing facts from possible implications. Do not give buy/sell advice.",
+                            "You are FINN, a precise investment-intelligence analyst. Use ONLY the supplied filing headline and details. "
+                            "Separate (A) facts explicitly stated in the filing, (B) plausible investor implications, and "
+                            "(C) items to verify. Never invent dates, amounts, decisions, guidance, or company-specific context. "
+                            "Do not imply that a routine board meeting signals good governance or a positive investment outcome. "
+                            "Do not speculate that dividends, buybacks, acquisitions, or strategy changes may occur unless the filing says so. "
+                            "Keep implications conditional and explicitly label them as general possibilities, not filing facts. "
+                            "If the filing contains little detail, keep the brief short and say that the filing provides limited information. "
+                            "Do not give buy/sell advice.",
                             f"Company: {row['symbol']}\nHeadline: {row['headline']}\n"
                             f"Filing details: {row['details']}\nCategory: {row['category']}\n\n"
                             "Return: 1) What happened 2) Why an investor may care 3) What to verify next. "
