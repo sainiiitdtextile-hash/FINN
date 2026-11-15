@@ -1,0 +1,4 @@
+date,symbol,headline,details,source_url,category,priority
+2026-11-13,INFY,Illustrative: Board meeting to consider quarterly results,"Demo-only example announcement. Replace with an actual exchange filing before presenting as live.",,results,High
+2026-11-13,HDFCBANK,Illustrative: Investor presentation uploaded,"Demo-only example announcement. This row is a UI test fixture, not a real filing.",,investor_meetings,Low
+2026-11-12,RELIANCE,Illustrative: Subsidiary business update,"Demo-only example announcement. This row is a UI test fixture, not a real filing.",,press_release,Medium
