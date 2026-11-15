@@ -1,4 +1,5 @@
 import os
+import hashlib
 from datetime import datetime
 
 import pandas as pd
@@ -225,8 +226,8 @@ elif section == "Intelligence":
                                 "Keep implications conditional and explicitly label them as general possibilities, not filing facts. "
                                 "If the filing contains little detail, keep the brief short and say that the filing provides limited information. "
                                 "Do not give buy/sell advice.",
-                                f"Company: {row['symbol']}\\nHeadline: {row['headline']}\\n"
-                                f"Filing details: {row['details']}\\nCategory: {row['category']}\\n\\n"
+                                f"Company: {row['symbol']}\nHeadline: {row['headline']}\n"
+                                f"Filing details: {row['details']}\nCategory: {row['category']}\n\n"
                                 "Return: 1) What happened 2) Why an investor may care 3) What to verify next. "
                                 "If information is insufficient, say so.",
                                 max_tokens=500,
@@ -300,9 +301,10 @@ else:
             st.session_state.chat_history.append({"role": "user", "content": question})
             with st.spinner("Retrieving relevant pages and analysing with Groq…"):
                 try:
-                    doc_key = "|".join(
-                        f"{p['source']}:{p['page']}:{len(p['text'])}" for p in pages
+                    doc_material = "".join(
+                        f"{p['source']}|{p['page']}|{p['text']}" for p in pages
                     )
+                    doc_key = hashlib.sha256(doc_material.encode("utf-8")).hexdigest()
                     cache_key = doc_key + "|" + question.strip().casefold()
                     if cache_key in st.session_state.research_answer_cache:
                         answer, used_sources = st.session_state.research_answer_cache[cache_key]
